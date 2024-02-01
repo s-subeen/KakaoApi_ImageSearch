@@ -3,6 +3,7 @@ package com.android.imagesearch.repository
 import com.android.imagesearch.data.ImageDocument
 import com.android.imagesearch.data.SearchModel
 import com.android.imagesearch.data.SearchResponse
+import com.android.imagesearch.data.SearchUiState
 import com.android.imagesearch.data.VideoDocument
 import retrofit2.http.Query
 
@@ -33,7 +34,7 @@ interface ImageSearchRepository {
         query: String,
         imagePage: Int,
         videoPage: Int
-    ): Pair<List<SearchModel>, List<SearchModel>>
+    ): Pair<SearchUiState, SearchUiState>
 
     suspend fun saveSearchData(searchWord: String)
 

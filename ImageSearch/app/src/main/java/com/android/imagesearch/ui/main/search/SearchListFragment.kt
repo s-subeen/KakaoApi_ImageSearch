@@ -52,7 +52,7 @@ class SearchListFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        viewModel.switchSavedStatus()
+        viewModel.reloadStorageItems()
     }
 
     private fun initView() {
@@ -78,14 +78,16 @@ class SearchListFragment : Fragment() {
 
     private fun initViewModel() = with(viewModel) {
         searchResult.observe(viewLifecycleOwner) {
-            searchListAdapter.submitList(it)
+            searchListAdapter.submitList(it.list)
+
+            if (it.showSnackMessage) {
+                it.snackMessage?.let { resId ->
+                    showSnackBar(resId)
+                }
+            }
         }
 
-        storageUiState.observe(viewLifecycleOwner) {
-            showSnackBar(it)
-        }
-
-        searchKeyword.observe(viewLifecycleOwner) {
+        searchWord.observe(viewLifecycleOwner) {
             binding.searchView.setQuery(it, false)
         }
 

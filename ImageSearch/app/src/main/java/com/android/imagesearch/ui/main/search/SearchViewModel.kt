@@ -9,6 +9,7 @@ import com.android.imagesearch.Constants.Companion.MAX_PAGE_COUNT_VIDEO
 import com.android.imagesearch.R
 import com.android.imagesearch.data.SearchModel
 import com.android.imagesearch.data.SearchPageCountUiState
+import com.android.imagesearch.data.SearchUiState
 import com.android.imagesearch.repository.ImageSearchRepository
 import kotlinx.coroutines.launch
 
@@ -16,17 +17,14 @@ class SearchViewModel(
     private val imageSearchRepository: ImageSearchRepository
 ) : ViewModel() {
 
-    private val _searchResult = MutableLiveData<List<SearchModel>>()
-    val searchResult: LiveData<List<SearchModel>> get() = _searchResult
-
-    private val _snackMessage = MutableLiveData<Int>()
-    val storageUiState: LiveData<Int> get() = _snackMessage
+    private val _searchResult = MutableLiveData(SearchUiState.init())
+    val searchResult: LiveData<SearchUiState> get() = _searchResult
 
     private var _pageCounts = MutableLiveData(SearchPageCountUiState.init())
     val pageCounts: LiveData<SearchPageCountUiState> get() = _pageCounts
 
-    private val _searchKeyword = MutableLiveData<String>()
-    val searchKeyword: LiveData<String> get() = _searchKeyword
+    private val _searchWord = MutableLiveData<String>()
+    val searchWord: LiveData<String> get() = _searchWord
 
     init {
         getStorageSearchWord()
@@ -34,49 +32,60 @@ class SearchViewModel(
 
     fun saveStorageSearchWord(query: String) = viewModelScope.launch {
         imageSearchRepository.saveSearchData(query)
-        _searchKeyword.value = query
+        _searchWord.value = query
     }
 
     private fun getStorageSearchWord() = viewModelScope.launch {
-        _searchKeyword.value = imageSearchRepository.loadSearchData() ?: ""
+        _searchWord.value = imageSearchRepository.loadSearchData() ?: ""
     }
 
+    fun searchCombinedResults(query: String) = viewModelScope.launch {
+        try {
+            val pageCounts = _pageCounts.value ?: SearchPageCountUiState.init()
 
-    fun searchCombinedResults(query: String) =
-        viewModelScope.launch {
-            try {
-                val pageCounts = _pageCounts.value ?: SearchPageCountUiState.init()
+            val (imageResponse, videoResponse) =
+                imageSearchRepository.searchCombinedResults(
+                    query = query,
+                    imagePage = pageCounts.imagePageCount,
+                    videoPage = pageCounts.videoPageCount
+                )
 
-                val (imageResponse, videoResponse) =
-                    imageSearchRepository.searchCombinedResults(
-                        query = query,
-                        imagePage = pageCounts.imagePageCount,
-                        videoPage = pageCounts.videoPageCount
-                    )
-
-                _searchResult.value = (imageResponse + videoResponse)
-                    .sortedByDescending { it.datetime }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            _searchResult.value = SearchUiState(
+                list = (imageResponse.list + videoResponse.list).sortedByDescending { it.datetime }
+            )
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
+    }
 
-    fun switchSavedStatus() = viewModelScope.launch {
+    fun reloadStorageItems() = viewModelScope.launch {
         val storageItems = imageSearchRepository.getStorageItems()
 
-        _searchResult.value = _searchResult.value?.map { currentItem ->
-            currentItem.copy(isSaved = storageItems.any { it.id == currentItem.id })
-        } ?: emptyList()
+        _searchResult.value = _searchResult.value?.copy(
+            showSnackMessage = false,
+            list = _searchResult.value?.list?.map { currentItem ->
+                currentItem.copy(isSaved = storageItems.any { it.id == currentItem.id })
+            } ?: emptyList()
+        )
     }
 
     private fun saveStorageImage(searchModel: SearchModel) = viewModelScope.launch {
-        _snackMessage.value = R.string.snack_image_save
         imageSearchRepository.saveStorageItem(searchModel)
+
+        updateSnackMessage(R.string.snack_image_save)
     }
 
     private fun removeStorageItem(searchModel: SearchModel) = viewModelScope.launch {
-        _snackMessage.value = R.string.snack_image_delete
         imageSearchRepository.removeStorageItem(searchModel)
+
+        updateSnackMessage(R.string.snack_image_delete)
+    }
+
+    private fun updateSnackMessage(snackMessage: Int) {
+        _searchResult.value = _searchResult.value?.copy(
+            showSnackMessage = true,
+            snackMessage = snackMessage
+        )
     }
 
     fun updateStorageItem(searchModel: SearchModel) {
@@ -89,9 +98,11 @@ class SearchViewModel(
                 removeStorageItem(updatedItem)
             }
 
-            _searchResult.value = _searchResult.value?.map {
-                if (it.id == updatedItem.id) updatedItem else it
-            } ?: emptyList()
+            _searchResult.value = _searchResult.value?.copy(
+                list = _searchResult.value?.list?.map {
+                    if (it.id == updatedItem.id) updatedItem else it
+                } ?: emptyList()
+            )
         }
     }
 

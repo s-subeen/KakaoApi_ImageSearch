@@ -9,6 +9,7 @@ import com.android.imagesearch.api.NetWorkClient
 import com.android.imagesearch.data.ImageDocument
 import com.android.imagesearch.data.SearchModel
 import com.android.imagesearch.data.SearchResponse
+import com.android.imagesearch.data.SearchUiState
 import com.android.imagesearch.data.VideoDocument
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -72,40 +73,43 @@ class ImageSearchRepositoryImpl(context: Context) : ImageSearchRepository {
 
     override suspend fun searchCombinedResults(
         query: String,
-        imageSize: Int,
-        videoSize: Int
-    ): Pair<List<SearchModel>, List<SearchModel>> = coroutineScope {
+        imagePage: Int,
+        videoPage: Int
+    ): Pair<SearchUiState, SearchUiState> = coroutineScope {
         val imageDeferred = async {
-            searchImage(query = query, page = imageSize).documents?.map {
-                SearchModel(
-                    thumbnailUrl = it.thumbnailUrl,
-                    siteName = it.displaySiteName,
-                    datetime = it.dateTime,
-                    itemType = SearchListType.IMAGE
-                )
-            } ?: emptyList()
+            try {
+                val response = searchImage(query = query, page = imagePage)
+                SearchUiState(list = response.documents?.map {
+                    SearchModel(
+                        thumbnailUrl = it.thumbnailUrl,
+                        siteName = it.displaySiteName,
+                        datetime = it.dateTime,
+                        itemType = SearchListType.IMAGE
+                    )
+                } ?: emptyList())
+            } catch (e: Exception) {
+                throw e
+            }
         }
 
         val videoDeferred = async {
-            searchVideo(query = query, page = videoSize).documents?.map {
-                SearchModel(
-                    thumbnailUrl = it.thumbnailUrl,
-                    siteName = it.title,
-                    datetime = it.dateTime,
-                    itemType = SearchListType.VIDEO
-                )
-            } ?: emptyList()
+            try {
+                val response = searchVideo(query = query, page = videoPage)
+                SearchUiState(list = response.documents?.map {
+                    SearchModel(
+                        thumbnailUrl = it.thumbnailUrl,
+                        siteName = it.title,
+                        datetime = it.dateTime,
+                        itemType = SearchListType.VIDEO
+                    )
+                } ?: emptyList())
+            } catch (e: Exception) {
+                throw e
+            }
         }
 
-        try {
-            val imageResponse = imageDeferred.await()
-            val videoResponse = videoDeferred.await()
-            Pair(imageResponse, videoResponse)
-        } catch (e: Exception) {
-            throw e
-        }
+        Pair(imageDeferred.await(), videoDeferred.await())
     }
-
 
     private fun getPrefsStorageItems(): List<SearchModel> {
         val jsonString = pref.getString(Constants.STORAGE_ITEMS, "")
