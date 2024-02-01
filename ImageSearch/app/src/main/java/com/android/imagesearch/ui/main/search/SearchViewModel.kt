@@ -36,7 +36,7 @@ class SearchViewModel(
     }
 
     private fun getStorageSearchWord() = viewModelScope.launch {
-        _searchWord.value = imageSearchRepository.loadSearchData() ?: ""
+        _searchWord.value = imageSearchRepository.loadSearchData().orEmpty()
     }
 
     fun searchCombinedResults(query: String) = viewModelScope.launch {
@@ -89,7 +89,7 @@ class SearchViewModel(
     }
 
     fun updateStorageItem(searchModel: SearchModel) {
-        val updatedItem = searchModel.copy(isSaved = !searchModel.isSaved)
+        val updatedItem = searchModel.copy(isSaved = searchModel.isSaved.not())
 
         viewModelScope.launch {
             if (updatedItem.isSaved) {
