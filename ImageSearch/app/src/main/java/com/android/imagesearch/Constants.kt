@@ -21,6 +21,9 @@ class Constants {
         // page count
         const val MAX_PAGE_COUNT_IMAGE = 50
         const val MAX_PAGE_COUNT_VIDEO = 15
+        const val MAX_SIZE_IMAGE = 80
+        const val MAX_SIZE_VIDEO = 30
+        const val SORT_TYPE = "accuracy"
     }
 }
 

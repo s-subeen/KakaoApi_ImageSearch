@@ -1,5 +1,8 @@
 package com.android.imagesearch.repository
 
+import com.android.imagesearch.Constants.Companion.MAX_SIZE_IMAGE
+import com.android.imagesearch.Constants.Companion.MAX_SIZE_VIDEO
+import com.android.imagesearch.Constants.Companion.SORT_TYPE
 import com.android.imagesearch.data.ImageDocument
 import com.android.imagesearch.data.SearchModel
 import com.android.imagesearch.data.SearchResponse
@@ -11,16 +14,16 @@ interface ImageSearchRepository {
 
     suspend fun searchImage(
         query: String,
-        sort: String = "accuracy",
+        sort: String = SORT_TYPE,
         page: Int,
-        size: Int = 80
+        size: Int = MAX_SIZE_IMAGE
     ): SearchResponse<ImageDocument>
 
     suspend fun searchVideo(
         @Query("query") query: String,
-        @Query("sort") sort: String = "accuracy",
+        @Query("sort") sort: String = SORT_TYPE,
         @Query("page") page: Int,
-        @Query("size") size: Int = 30
+        @Query("size") size: Int = MAX_SIZE_VIDEO
     ): SearchResponse<VideoDocument>
 
 
