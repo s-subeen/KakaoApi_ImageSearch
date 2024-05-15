@@ -1,7 +1,7 @@
 package com.android.imagesearch.api
 
 import com.android.imagesearch.BuildConfig
-import com.android.imagesearch.Constants.Companion.BASE_URL
+import com.android.imagesearch.ui.util.Constants.Companion.BASE_URL
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit

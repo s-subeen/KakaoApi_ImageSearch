@@ -1,4 +1,4 @@
-package com.android.imagesearch.ui.main.storage
+package com.android.imagesearch.ui.storage
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -6,9 +6,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.imagesearch.data.SearchModel
 import com.android.imagesearch.repository.ImageSearchRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class StorageViewModel(
+@HiltViewModel
+class StorageViewModel  @Inject constructor(
     private val imageSearchRepository: ImageSearchRepository
 ) : ViewModel() {
 

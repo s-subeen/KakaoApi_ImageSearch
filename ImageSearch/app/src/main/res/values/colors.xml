@@ -5,4 +5,5 @@
     <color name="color_1">#58b8f9</color>
     <color name="color_2">#00d3fa</color>
     <color name="color_3">#08e9e5</color>
+    <color name="empty">#C8C8C8</color>
 </resources>

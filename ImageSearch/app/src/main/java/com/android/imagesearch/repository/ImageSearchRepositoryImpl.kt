@@ -1,11 +1,10 @@
 package com.android.imagesearch.repository
 
-import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
-import com.android.imagesearch.Constants
+import com.android.imagesearch.ui.util.Constants
+import com.android.imagesearch.api.KaKaoSearchApi
 import com.android.imagesearch.data.SearchListType
-import com.android.imagesearch.api.NetWorkClient
 import com.android.imagesearch.data.ImageDocument
 import com.android.imagesearch.data.SearchModel
 import com.android.imagesearch.data.SearchResponse
@@ -15,18 +14,24 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Retrofit과 로컬 저장소 SharedPreferences를 사용하여 내 보관함 관련 기능을 처리
  */
-class ImageSearchRepositoryImpl(context: Context) : ImageSearchRepository {
+@Singleton
+class ImageSearchRepositoryImpl @Inject constructor(
+    private val api: KaKaoSearchApi,
+    private val sharedPreferences: SharedPreferences
+) : ImageSearchRepository {
     override suspend fun searchImage(
         query: String,
         sort: String,
         page: Int,
         size: Int
     ): SearchResponse<ImageDocument> {
-        return NetWorkClient.ImageNetWork.searchImage(query, sort, page, size)
+        return api.searchImage(query, sort, page, size)
     }
 
     override suspend fun searchVideo(
@@ -35,10 +40,8 @@ class ImageSearchRepositoryImpl(context: Context) : ImageSearchRepository {
         page: Int,
         size: Int
     ): SearchResponse<VideoDocument> {
-        return NetWorkClient.ImageNetWork.searchVideo(query, sort, page, size)
+        return api.searchVideo(query, sort, page, size)
     }
-
-    private val pref: SharedPreferences = context.getSharedPreferences(Constants.PREFERENCE_NAME, 0)
 
     /**
      * 이미지 검색 화면에서 이미지를 클릭하면 보관함에 저장하기 위한 함수
@@ -112,7 +115,7 @@ class ImageSearchRepositoryImpl(context: Context) : ImageSearchRepository {
     }
 
     private fun getPrefsStorageItems(): List<SearchModel> {
-        val jsonString = pref.getString(Constants.STORAGE_ITEMS, "")
+        val jsonString = sharedPreferences.getString(Constants.STORAGE_ITEMS, "")
         return if (jsonString.isNullOrEmpty()) {
             emptyList()
         } else {
@@ -128,14 +131,14 @@ class ImageSearchRepositoryImpl(context: Context) : ImageSearchRepository {
      */
     private fun savePrefsStorageItems(items: List<SearchModel>) {
         val jsonString = Gson().toJson(items)
-        pref.edit().putString(Constants.STORAGE_ITEMS, jsonString).apply()
+        sharedPreferences.edit().putString(Constants.STORAGE_ITEMS, jsonString).apply()
     }
 
     /**
      * 검색 키워드 저장
      */
     override suspend fun saveSearchData(searchWord: String) {
-        pref.edit {
+        sharedPreferences.edit {
             putString(Constants.SEARCH_WORD, searchWord)
         }
     }
@@ -144,6 +147,6 @@ class ImageSearchRepositoryImpl(context: Context) : ImageSearchRepository {
      * 검색 키워드 불러오기
      */
     override suspend fun loadSearchData(): String? =
-        pref.getString(Constants.SEARCH_WORD, "")
+        sharedPreferences.getString(Constants.SEARCH_WORD, "")
 
 }

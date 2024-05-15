@@ -1,4 +1,4 @@
-package com.android.signup.provider
+package com.android.imagesearch.provider
 
 import android.content.Context
 import androidx.annotation.StringRes

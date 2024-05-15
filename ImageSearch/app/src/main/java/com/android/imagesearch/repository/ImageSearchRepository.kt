@@ -1,8 +1,8 @@
 package com.android.imagesearch.repository
 
-import com.android.imagesearch.Constants.Companion.MAX_SIZE_IMAGE
-import com.android.imagesearch.Constants.Companion.MAX_SIZE_VIDEO
-import com.android.imagesearch.Constants.Companion.SORT_TYPE
+import com.android.imagesearch.ui.util.Constants.Companion.MAX_SIZE_IMAGE
+import com.android.imagesearch.ui.util.Constants.Companion.MAX_SIZE_VIDEO
+import com.android.imagesearch.ui.util.Constants.Companion.SORT_TYPE
 import com.android.imagesearch.data.ImageDocument
 import com.android.imagesearch.data.SearchModel
 import com.android.imagesearch.data.SearchResponse

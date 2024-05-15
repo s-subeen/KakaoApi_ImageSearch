@@ -1,7 +1,7 @@
-package com.android.imagesearch
+package com.android.imagesearch.ui.util
 
 import android.widget.ImageView
-import com.android.imagesearch.Constants.Companion.DATE_FORMAT
+import com.android.imagesearch.ui.util.Constants.Companion.DATE_FORMAT
 import com.bumptech.glide.Glide
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -24,6 +24,10 @@ class Constants {
         const val MAX_SIZE_IMAGE = 80
         const val MAX_SIZE_VIDEO = 30
         const val SORT_TYPE = "accuracy"
+
+        // navigation
+        const val SEARCH = "search"
+        const val STORAGE = "storage"
     }
 }
 
@@ -39,4 +43,14 @@ object FormatManager {
             .load(url)
             .into(this)
     }
+
+    fun formatDate(date: Date?): String {
+        if (date == null) {
+            return ""
+        }
+
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        return dateFormat.format(date)
+    }
+
 }

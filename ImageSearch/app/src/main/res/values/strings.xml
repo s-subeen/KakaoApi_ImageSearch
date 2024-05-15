@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">ImageSearch</string>
+    <string name="app_name">Oasis</string>
 
     <string name="fragment_search">검색하기</string>
     <string name="fragment_favorite">보관함</string>

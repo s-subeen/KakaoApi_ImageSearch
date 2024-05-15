@@ -1,7 +1,7 @@
 package com.android.imagesearch.api
 
 
-import com.android.imagesearch.Constants
+import com.android.imagesearch.ui.util.Constants
 import com.android.imagesearch.data.ImageDocument
 import com.android.imagesearch.data.SearchResponse
 import com.android.imagesearch.data.VideoDocument
