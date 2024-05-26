@@ -1,6 +1,7 @@
 package com.android.imagesearch.ui.search
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.Card
 import androidx.compose.material.CircularProgressIndicator
@@ -29,8 +31,8 @@ import androidx.compose.material.TextField
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -52,61 +54,60 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.android.imagesearch.ui.util.FormatManager.formatDate
 import com.android.imagesearch.R
 import com.android.imagesearch.data.SearchListType
 import com.android.imagesearch.data.SearchModel
+import com.android.imagesearch.ui.storage.GradientProvider
 
 @SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
-fun SearchListScreen(viewModel: SearchViewModel, query: String = "아이유") {
-    // LiveData를 Composable에서 사용하기 위해 observeAsState()를 사용하여 현재 상태를 관찰
-    val searchState by viewModel.searchResult.observeAsState()
+fun SearchListScreen(viewModel: SearchViewModel = hiltViewModel()) {
+    val searchState by viewModel.searchResult.collectAsState()
 
     Scaffold(
         topBar = {
-            SearchTopBar(
-                // 검색 버튼 클릭 시 호출되는 콜백 함수
-                onSearch = { newQuery ->
-                    viewModel.resetPageCount() // 페이지 카운트 초기화
-                    viewModel.saveStorageSearchWord(newQuery) // 검색어 저장 및 처리
-                    viewModel.searchCombinedResults(newQuery) // 검색 결과 업데이트
-                },
-                query = query, // 현재 검색어
-                onQueryChange = { _ -> }
-            )
+            searchState.keyword?.let {
+                SearchTopBar(
+                    onSearch = { newQuery ->
+                        viewModel.resetPageCount()
+                        viewModel.saveStorageSearchWord(newQuery)
+                        viewModel.searchCombinedResults(newQuery)
+                    },
+                    query = it,
+                    onQueryChange = { _ -> }
+                )
+            }
         },
         content = {
-            // 검색 상태가 null이 아닌 경우 검색 결과를 표시하는 SearchList Composable 함수 추가
-            if (searchState != null) {
+            if (searchState.list.isNotEmpty()) {
                 SearchList(
-                    items = searchState!!.list, // 검색 결과 목록
-                    // 아이템 클릭 시 호출되는 콜백 함수
+                    items = searchState.list,
                     onItemClick = { viewModel.updateStorageItem(it) },
-                    // 스크롤이 끝에 도달했을 때 호출되는 콜백 함수
                     onScrollEnd = { viewModel.plusPageCount() }
                 )
             } else {
-                // 검색 상태가 null인 경우
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    CircularProgressIndicator(color = colorResource(id = R.color.color_1)) // 로딩 아이콘
+                    CircularProgressIndicator(color = colorResource(id = R.color.color_1))
                 }
             }
         }
     )
 
-    // 특정 스코프에서 효과를 시작하는 Composable 함수
-    LaunchedEffect(viewModel) {
-        // viewModel이 변경될 때마다 실행되는 효과
-        viewModel.reloadStorageItems() // 스토리지 항목 다시로드
-        viewModel.searchCombinedResults(query) // 새로운 검색어로 이미지와 동영상 결과 검색
+    val currentKeyword = searchState.keyword
+
+    LaunchedEffect(currentKeyword) {
+        viewModel.reloadStorageItems()
+        if (currentKeyword != null) {
+            viewModel.searchCombinedResults(currentKeyword)
+        }
     }
 }
-
 
 @Composable
 fun SearchTopBar(
@@ -119,13 +120,8 @@ fun SearchTopBar(
      * 현재의 검색어를 가지고 있는 text 상태를 생성하고 이를 Composable 함수 내에서 관리
      */
     var text by remember { mutableStateOf(TextFieldValue(query)) }
-    val gradient = listOf(
-        colorResource(id = R.color.color_1),
-        colorResource(id = R.color.color_2),
-        colorResource(id = R.color.color_3)
-    )
 
-    val gradientLine =  listOf(
+    val gradientLine = listOf(
         colorResource(id = R.color.white),
         colorResource(id = R.color.color_3)
     )
@@ -151,7 +147,7 @@ fun SearchTopBar(
                         BorderStroke(
                             width = 1.dp, // 테두리 두께
                             brush = Brush.linearGradient(
-                                colors = gradient, // 그라데이션 색상
+                                colors = GradientProvider(), // 그라데이션 색상
                                 start = Offset.Zero,
                                 end = Offset.Infinite
                             )
@@ -219,30 +215,34 @@ fun SearchTopBar(
 }
 
 
-
 @Composable
 fun SearchList(
     items: List<SearchModel>, // 검색 항목 목록
     onItemClick: (SearchModel) -> Unit, // 항목을 클릭할 때 호출되는 콜백 함수
     onScrollEnd: () -> Unit // 스크롤이 끝에 도달했을 때 호출되는 콜백 함수
 ) {
-    LazyVerticalGrid( // 세로 방향의 그리드 형태로 아이템을 배치하는 LazyVerticalGrid
+    // 스크롤 감시를 추가하여 리스트의 끝에 도달했을 때 onScrollEnd 콜백을 호출
+    val listState = rememberLazyGridState()
+    LazyVerticalGrid(
+        state = listState,
         columns = GridCells.Fixed(2), // 고정된 열 개수
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp) // 아이템 간의 수직 간격
+        verticalArrangement = Arrangement.spacedBy(8.dp), // 아이템 간의 수직 간격
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 8.dp)
     ) {
         items(items.size) { index ->
-            SearchItem( // 검색 항목을 표시하는 SearchItem 컴포저블
-                item = items[index], // 현재 인덱스에 해당하는 항목
-                onItemClick = onItemClick, // 항목을 클릭할 때 호출되는 콜백 함수 전달
-                modifier = Modifier.fillMaxWidth() // 너비를 최대한 채우도록 수정자 지정
+            SearchItem(
+                item = items[index],
+                onItemClick = onItemClick,
+                modifier = Modifier.fillMaxWidth()
             )
+            // 리스트의 끝에 도달했을 때 onScrollEnd 콜백 호출
+            if (index == items.size - 1 && listState.isScrollInProgress.not()) {
+                onScrollEnd()
+            }
         }
-
-        item {
-            onScrollEnd() // 스크롤이 끝에 도달했을 때 호출되는 콜백 함수 실행
-        }
-
     }
 }
 
@@ -366,131 +366,3 @@ fun SearchItem(
         }
     }
 }
-
-
-
-//class SearchListFragment : Fragment() {
-//    companion object {
-//        fun newInstance() = SearchListFragment()
-//    }
-//
-//    private var _binding: FragmentSearchBinding? = null
-//
-//    private val binding get() = _binding!!
-//
-//    private val viewModel: SearchViewModel by viewModels {
-//        SearchViewModelProviderFactory(
-//            ImageSearchRepositoryImpl(requireActivity())
-//        )
-//    }
-//
-//    private val searchListAdapter by lazy {
-//        SearchListAdapter(
-//            itemClickListener = {
-//                viewModel.updateStorageItem(it)
-//            }
-//        )
-//    }
-//
-//    override fun onCreateView(
-//        inflater: LayoutInflater, container: ViewGroup?,
-//        savedInstanceState: Bundle?
-//    ): View {
-//        _binding = FragmentSearchBinding.inflate(inflater, container, false)
-//        return binding.root
-//    }
-//
-//    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-//        super.onViewCreated(view, savedInstanceState)
-//
-//        initView()
-//        initViewModel()
-//    }
-//
-//    override fun onResume() {
-//        super.onResume()
-//        viewModel.reloadStorageItems()
-//    }
-//
-//    private fun initView() {
-//        initSearchView()
-//
-//        initRecyclerView()
-//    }
-//
-//    private fun initRecyclerView() = with(binding) {
-//        recyclerSearch.adapter = searchListAdapter
-//
-//        recyclerSearch.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-//            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-//                super.onScrollStateChanged(recyclerView, newState)
-//                if (binding.recyclerSearch.canScrollVertically(1).not()
-//                    && newState == RecyclerView.SCROLL_STATE_IDLE
-//                ) {
-//                    viewModel.plusPageCount()
-//                }
-//            }
-//        })
-//    }
-//
-//    private fun initViewModel() = with(viewModel) {
-//        searchResult.observe(viewLifecycleOwner) {
-//            searchListAdapter.submitList(it.list)
-//
-//            if (it.showSnackMessage) {
-//                it.snackMessage?.let { resId ->
-//                    showSnackBar(resId)
-//                }
-//            }
-//        }
-//
-//        searchWord.observe(viewLifecycleOwner) {
-//            binding.searchView.setQuery(it, false)
-//        }
-//
-//        pageCounts.observe(viewLifecycleOwner) {
-//            val query = binding.searchView.query.toString()
-//            viewModel.searchCombinedResults(query)
-//        }
-//    }
-//
-//    override fun onDestroyView() {
-//        _binding = null
-//        super.onDestroyView()
-//    }
-//
-//    override fun onStop() {
-//        val query = binding.searchView.query.toString()
-//        viewModel.saveStorageSearchWord(query)
-//        super.onStop()
-//    }
-//
-//    private fun initSearchView() = with(binding) {
-//        searchView.isSubmitButtonEnabled = true
-//        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener,
-//            androidx.appcompat.widget.SearchView.OnQueryTextListener {
-//            override fun onQueryTextSubmit(query: String?): Boolean {
-//                if (query != null) {
-//                    viewModel.resetPageCount()
-//                }
-//
-//                return false
-//            }
-//
-//            override fun onQueryTextChange(newText: String?): Boolean = false
-//        })
-//    }
-//
-//    private fun showSnackBar(resId: Int) {
-//        Snackbar.make(
-//            binding.searchFragment,
-//            getString(resId),
-//            Snackbar.LENGTH_SHORT
-//        ).show()
-//    }
-//
-//
-//    fun smoothScrollToTop() =
-//        binding.recyclerSearch.smoothScrollToPosition(0)
-//
-//}

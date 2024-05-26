@@ -7,7 +7,6 @@ import java.util.UUID
 
 @Parcelize
 data class SearchModel(
-    val id: String = UUID.randomUUID().toString(),
     val thumbnailUrl: String?,
     val siteName: String?,
     val datetime: Date?,

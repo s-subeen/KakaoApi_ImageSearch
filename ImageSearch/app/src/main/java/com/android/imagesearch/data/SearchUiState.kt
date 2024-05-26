@@ -3,14 +3,12 @@ package com.android.imagesearch.data
 
 data class SearchUiState(
     val list: List<SearchModel>,
-    val showSnackMessage: Boolean = false,
-    val snackMessage: Int? = null
+    val keyword: String? = ""
 ) {
     companion object {
         fun init() = SearchUiState(
             list = emptyList(),
-            showSnackMessage = false,
-            snackMessage = null
+            keyword = null
         )
     }
 }

@@ -49,7 +49,7 @@ class ImageSearchRepositoryImpl @Inject constructor(
      */
     override suspend fun saveStorageItem(searchModel: SearchModel) {
         val favoriteItems = getPrefsStorageItems().toMutableList()
-        val findItem = favoriteItems.find { it.id == searchModel.id }
+        val findItem = favoriteItems.find { it.thumbnailUrl == searchModel.thumbnailUrl }
 
         if (findItem == null) {
             favoriteItems.add(searchModel)
@@ -63,7 +63,7 @@ class ImageSearchRepositoryImpl @Inject constructor(
      */
     override suspend fun removeStorageItem(searchModel: SearchModel) {
         val favoriteItems = getPrefsStorageItems().toMutableList()
-        favoriteItems.removeAll { it.id == searchModel.id }
+        favoriteItems.removeAll { it.thumbnailUrl == searchModel.thumbnailUrl }
         savePrefsStorageItems(favoriteItems)
     }
 
